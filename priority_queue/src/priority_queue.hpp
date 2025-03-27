@@ -1,82 +1,225 @@
 #ifndef SJTU_PRIORITY_QUEUE_HPP
 #define SJTU_PRIORITY_QUEUE_HPP
 
+#include <cassert>
 #include <cstddef>
 #include <functional>
 #include "exceptions.hpp"
 
 namespace sjtu {
-/**
- * @brief a container like std::priority_queue which is a heap internal.
- * **Exception Safety**: The `Compare` operation might throw exceptions for certain data.
- * In such cases, any ongoing operation should be terminated, and the priority queue should be restored to its original state before the operation began.
- */
-template<typename T, class Compare = std::less<T>>
-class priority_queue {
-public:
-	/**
-	 * @brief default constructor
-	 */
-	priority_queue() {}
+  /**
+   * a container like std::priority_queue which is a heap internal.
+   */
+  template<typename T,class Compare = std::less<T> >
+  class priority_queue {
+    size_t size_ = 0;
+    Compare comp_;
 
-	/**
-	 * @brief copy constructor
-	 * @param other the priority_queue to be copied
-	 */
-	priority_queue(const priority_queue &other) {}
+    struct Node {
+      T value;
 
-	/**
-	 * @brief deconstructor
-	 */
-	~priority_queue() {}
+      Node *child = nullptr, *next = nullptr;
 
-	/**
-	 * @brief Assignment operator
-	 * @param other the priority_queue to be assigned from
-	 * @return a reference to this priority_queue after assignment
-	 */
-	priority_queue &operator=(const priority_queue &other) {}
+      explicit Node(T value): value(value) {
+      }
+    };
 
-	/**
-	 * @brief get the top element of the priority queue.
-	 * @return a reference of the top element.
-	 * @throws container_is_empty if empty() returns true
-	 */
-	const T & top() const {}
+    Node *head_ = nullptr;
 
-	/**
-	 * @brief push new element to the priority queue.
-	 * @param e the element to be pushed
-	 */
-	void push(const T &e) {}
+    void clear(Node *obj) {
+      if (!obj) {
+        return;
+      }
+      if (obj->child) {
+        clear(obj->child);
+      }
+      if (obj->next) {
+        clear(obj->next);
+      }
+      delete obj;
+    }
 
-	/**
-	 * @brief delete the top element from the priority queue.
-	 * @throws container_is_empty if empty() returns true
-	 */
-	void pop() {}
+    void copy(Node *obj, Node *target) {
+      if (target->child) {
+        obj->child = new Node(*target->child);
+        copy(obj->child, target->child);
+      }
+      if (target->next) {
+        obj->next = new Node(*target->next);
+        copy(obj->next, target->next);
+      }
+    }
 
-	/**
-	 * @brief return the number of elements in the priority queue.
-	 * @return the number of elements.
-	 */
-	size_t size() const {}
+    Node *rearrange(Node *x) {
+      if (x == nullptr || x->next == nullptr) {
+        return x;
+      }
+      Node *y = x->next;
+      Node *z = y->next;
+      x->next = y->next = nullptr;
+      try {
+        return Node_merge(rearrange(z), Node_merge(x, y));
+      } catch (...) {
+        x->next = y, y->next = z;
+        throw sjtu::runtime_error();
+      }
+    }
 
-	/**
-	 * @brief check if the container is empty.
-	 * @return true if it is empty, false otherwise.
-	 */
-	bool empty() const {}
+    Node *Node_merge(Node *x, Node *y) {
+      if (x == nullptr) {
+        return y;
+      }
+      if (y == nullptr) {
+        return x;
+      }
+      if (comp_(x->value, y->value)) {
+        x->next = y->child;
+        y->child = x;
+        return y;
+      } else {
+        y->next = x->child;
+        x->child = y;
+        return x;
+      }
+    }
 
-	/**
-	 * @brief merge another priority_queue into this one.
-	 * The other priority_queue will be cleared after merging.
-	 * The complexity is at most O(logn).
-	 * @param other the priority_queue to be merged.
-	 */
-	void merge(priority_queue &other) {}
-};
+  public:
+    /**
+     * constructors
+     */
+    priority_queue() = default;
 
+    priority_queue(const priority_queue &other) {
+      if (head_) {
+        clear(head_);
+      }
+      size_ = other.size_;
+      if (size_ != 0) {
+        head_ = new Node(*other.head_);
+        copy(head_, other.head_);
+      }
+    }
+
+    /**
+     * deconstructor
+     */
+    ~priority_queue() {
+      clear(head_);
+    }
+
+    /**
+     * Assignment operator
+     */
+    priority_queue &operator=(const priority_queue &other) {
+      if (&other == this) {
+        return *this;
+      }
+      if (head_) {
+        clear(head_);
+        head_ = nullptr;
+      }
+      size_ = other.size_;
+      if (size_ != 0) {
+        head_ = new Node(*other.head_);
+        copy(head_, other.head_);
+      }
+      return *this;
+    }
+
+    /**
+     * get the top of the queue.
+     * @return a reference of the top element.
+     * throw container_is_empty if empty() returns true;
+     */
+    const T &top() const {
+      if (empty()) {
+        throw container_is_empty();
+      }
+      return head_->value;
+    }
+
+    /**
+     *
+     * push new element to the priority queue.
+     */
+    void push(const T &e) {
+      if (head_ == nullptr) {
+        size_ = 1;
+        head_ = new Node(e);
+        return;
+      }
+      Node *tmp = new Node(e);
+      try {
+        head_ = Node_merge(head_, tmp);
+        size_++;
+      } catch (...) {
+        delete tmp;
+        throw sjtu::runtime_error();
+      }
+    }
+
+    /**
+     *
+     * delete the top element.
+     * throw container_is_empty if empty() returns true;
+     */
+    void pop() {
+      if (empty()) {
+        throw container_is_empty();
+      }
+      try {
+        Node *tmp = rearrange(head_->child);
+        delete head_;
+        head_ = tmp;
+        size_--;
+      } catch (...) {
+        throw sjtu::runtime_error();
+      }
+    }
+
+    /**
+     * return the number of the elements.
+     */
+    size_t size() const {
+      return size_;
+    }
+
+    /**
+     * check if the container has at least an element.
+     * @return true if it is empty, false if it has at least an element.
+     */
+    bool empty() const {
+      if (size_ == 0) {
+        return true;
+      }
+      return false;
+    }
+
+    /**
+     * merge two priority_queues with at most O(logn) complexity.
+     * clear the other priority_queue.
+     */
+    void merge(priority_queue &other) {
+      if (other.empty()) {
+        return;
+      }
+      if (empty()) {
+        head_ = other.head_;
+        other.head_ = nullptr;
+        size_ = other.size();
+        other.size_ = 0;
+        return;
+      }
+      try {
+        head_ = Node_merge(head_, other.head_);
+        other.head_ = nullptr;
+        size_ += other.size();
+        other.size_ = 0;
+      } catch (...) {
+        throw sjtu::runtime_error();
+      }
+    }
+  };
 }
 
 #endif

@@ -20,7 +20,7 @@ namespace sjtu {
     void double_capacity() {
       T *tmp = (T *) malloc(2 * capacity_ * sizeof(T));
       for (int i = 0; i < size_; ++i) {
-        new(tmp + i) T(arr_[i]);
+        new(tmp + i) T(std::move(arr_[i]));
       }
       capacity_ *= 2;
       if (arr_ != nullptr) {
@@ -317,6 +317,24 @@ namespace sjtu {
       }
     }
 
+    vector(vector &&other) noexcept
+    : arr_(other.arr_), size_(other.size_), capacity_(other.capacity_) {
+      other.arr_ = nullptr;
+      other.size_ = other.capacity_ = 0;
+    }
+
+    // 移动赋值运算符
+    vector &operator=(vector &&other) noexcept {
+      if (this != &other) {
+        this->~vector(); // 清理当前资源
+        arr_ = other.arr_;
+        size_ = other.size_;
+        capacity_ = other.capacity_;
+        other.arr_ = nullptr;
+        other.size_ = other.capacity_ = 0;
+      }
+      return *this;
+    }
     /**
      * Destructor
      */
@@ -572,6 +590,18 @@ namespace sjtu {
       size_++;
     }
 
+    void push_back(T &&value) {
+      if (capacity_ == 0) {
+        capacity_ = 1;
+        size_ = 1;
+        arr_ = (T *) malloc(capacity_ * sizeof(T));
+        new(arr_)T(std::move(value));
+        return;
+      }
+      if (size_ == capacity_) double_capacity();
+      new(arr_ + size_) T(std::move(value)); // 移动构造
+      size_++;
+    }
     /**
      * remove the last element from the end.
      * throw container_is_empty if size() == 0
