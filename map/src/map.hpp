@@ -36,6 +36,8 @@ namespace sjtu {
     Node *root_ = nullptr;
     size_t size_ = 0;
     Compare compare = Compare();
+    Node* begin_=nullptr;
+    Node* end_=nullptr;
 
     void Clear(Node *&obj) {
       if (obj == nullptr) {
@@ -379,6 +381,9 @@ namespace sjtu {
        */
       iterator &operator--() {
         if (value == nullptr) {
+          if(container->end_&&!container->end_->right) {
+            return *this=iterator(container->end_,container);
+          }
           auto tmp = container->root_;
           if (!container->root_) {
             throw invalid_iterator();
@@ -519,6 +524,9 @@ namespace sjtu {
        */
       const_iterator &operator--() {
         if (value == nullptr) {
+          if(container->end_&&!container->end_->right) {
+            return *this=const_iterator(container->end_,container);
+          }
           auto tmp = container->root_;
           if (!container->root_) {
             throw invalid_iterator();
@@ -676,10 +684,14 @@ namespace sjtu {
       if (!root_) {
         return iterator(nullptr, this);
       }
+      if(begin_&&!begin_->left) {
+        return iterator(begin_,this);
+      }
       auto tmp = root_;
       while (tmp->left) {
         tmp = tmp->left;
       }
+      begin_=tmp;
       return iterator(tmp, this);
     }
 
@@ -741,6 +753,8 @@ namespace sjtu {
      *   the second one is true if insert successfully, or false.
      */
     pair<iterator, bool> insert(const value_type &value) {
+      begin_=nullptr;
+      end_=nullptr;
       if (!root_) {
         root_ = New(value);
         size_++;
@@ -807,6 +821,8 @@ namespace sjtu {
      * throw if pos pointed to a bad element (pos == this->end() || pos points an element out of this)
      */
     void erase(iterator pos) {
+      begin_=nullptr;
+      end_=nullptr;
       if (pos.value == nullptr || pos.container != this) {
         throw invalid_iterator();
       }
