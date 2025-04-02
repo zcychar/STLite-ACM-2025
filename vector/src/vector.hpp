@@ -165,7 +165,7 @@ namespace sjtu {
        * some other operator for iterator.
        */
       bool operator!=(const iterator &rhs) const {
-        return operator==(rhs) ^ 1;
+        return !(operator==(rhs));
       }
 
       bool operator!=(const const_iterator &rhs) const {

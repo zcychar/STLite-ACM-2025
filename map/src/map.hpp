@@ -91,6 +91,7 @@ namespace sjtu {
         Copy(obj->right, target->right);
       }
     }
+
     //Left Rotation
     //links the rl node to the right of current node
     //the right node becomes the parent of current node
@@ -252,7 +253,7 @@ namespace sjtu {
                 break;
               }
               default: {
-                exit(2);
+                exit(1);
               }
             }
             break;
@@ -278,7 +279,7 @@ namespace sjtu {
                 break;
               }
               default: {
-                exit(2);
+                exit(1);
               }
             }
             break;
@@ -794,7 +795,7 @@ namespace sjtu {
           }
           break;
         } else {
-          exit(3);
+          exit(1);
         }
       }
       return pair(iterator(pos, this), true);
